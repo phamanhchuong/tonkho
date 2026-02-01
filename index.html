@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Kiểm kê tồn kho</title>
+
+<style>
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto}
+body{margin:0;background:#eef2f7}
+.app{max-width:520px;margin:auto;min-height:100vh;padding-bottom:90px}
+
+.header{
+    background:linear-gradient(135deg,#2f80ed,#56ccf2);
+    color:#fff;padding:16px;text-align:center;
+    font-size:18px;font-weight:600;
+    border-bottom-left-radius:20px;
+    border-bottom-right-radius:20px
+}
+
+.actions{
+    display:flex;gap:10px;padding:12px
+}
+.actions button{
+    flex:1;padding:12px;border:none;border-radius:14px;
+    font-size:14px;font-weight:600;color:#fff
+}
+.btn-prev{background:#0f766e}
+.btn-lock{background:#a16207}
+
+.card{
+    background:#fff;margin:10px;border-radius:16px;
+    padding:14px;box-shadow:0 6px 16px rgba(0,0,0,.08)
+}
+.name{font-weight:600;font-size:15px}
+.unit{font-size:12px;color:#6b7280;margin-bottom:8px}
+
+input{
+    width:100%;padding:12px;border-radius:12px;
+    border:1px solid #d1d5db;font-size:15px;text-align:center
+}
+
+.row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:8px
+}
+
+.btn-add{
+    background:#3b82f6;color:#fff;
+    border:none;border-radius:14px;
+    padding:12px;font-size:14px;
+    font-weight:600;width:100%;
+    margin-bottom:6px
+}
+
+.btn-refresh{
+    background:#e5e7eb;color:#111827;
+    border:none;border-radius:14px;
+    padding:10px;font-size:13px;
+    font-weight:600;width:100%
+}
+
+.modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.4);
+    display:none;align-items:center;justify-content:center
+}
+.modal-box{
+    background:#fff;width:92%;max-height:80%;
+    border-radius:18px;padding:16px;overflow:auto
+}
+.modal h3{margin:0 0 10px}
+.list div{
+    display:flex;justify-content:space-between;
+    padding:6px 0;border-bottom:1px dashed #ddd;
+    font-size:14px
+}
+
+.toast{
+    position:fixed;bottom:20px;left:50%;
+    transform:translateX(-50%);
+    background:#111827;color:#fff;
+    padding:12px 18px;border-radius:14px;
+    font-size:14px;display:none
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<div class="header">📦 Kiểm kê tồn kho hôm nay</div>
+
+<div class="actions">
+    <button class="btn-prev" onclick="showPrev()">📋 Tồn hôm trước</button>
+    <button class="btn-lock" onclick="lockDay()">🔒 Chốt ngày</button>
+</div>
+
+<div id="items"></div>
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-box">
+        <h3>📦 Tồn kho đã chốt</h3>
+        <div class="list" id="prevList"></div>
+        <button class="btn-add" style="background:#ef4444" onclick="closeModal()">Đóng</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const items = [
+["Nước chấm","Kg"],["Dưa chua","Túi"],["Tép mỡ","Kg"],
+["Nước lèo","Nồi"],["Nước chấm 250G","Hộp"],
+["Gia vị sốt","Gói"],["Mật ong pha chế","Túi"],
+["Mực size >9.5cm đen","Kg"],["Hủ tiếu nước","Cục"],
+["Tỏi phi","Kg"],["Café","Kg"],["Nước suối","Chai"],
+["Nước ngọt","Chai"],["Cam tươi","Kg"],["Chanh","Kg"],
+["Chanh dây 4 mùa","Hộp"],["Mực ống size >22cm","Kg"],
+["Tôm hấp 300gram","Hộp"],["Tôm hấp lột vỏ (50c)","Túi"],
+["Trứng cút","Cái"],["Hủ tiếu khô","Cục"],
+["Tiêu","Kg"],["Mỡ (dầu)","Kg"],["Hành phi","Kg"],
+["Sữa tươi","ML"],["Sữa đặc","ML"],["Giá","Kg"],
+["Hành lá","Kg"],["Ớt","Kg"],["Ngò rí","Kg"],["Tần ô","Kg"]
+];
+
+const container=document.getElementById("items");
+
+items.forEach((i,idx)=>{
+container.innerHTML+=`
+<div class="card">
+    <div class="name">${i[0]}</div>
+    <div class="unit">Đơn vị: ${i[1]}</div>
+
+    <div class="row">
+        <input id="expr${idx}" placeholder="VD: 40+50">
+        <input id="total${idx}" placeholder="Tổng thực tế" readonly>
+    </div>
+
+    <button class="btn-add" onclick="calc(${idx})">➕ Cộng vào tổng</button>
+    <button class="btn-refresh" onclick="resetItem(${idx})">🔄 Làm mới</button>
+</div>`;
+});
+
+function calc(i){
+    const expr=document.getElementById("expr"+i).value;
+    try{
+        const total=eval(expr)||0;
+        document.getElementById("total"+i).value=total;
+    }catch{
+        toast("❌ Dữ liệu không hợp lệ");
+    }
+}
+
+function resetItem(i){
+    document.getElementById("expr"+i).value="";
+    document.getElementById("total"+i).value="";
+}
+
+function lockDay(){
+    const data={
+        date:new Date().toLocaleDateString("vi-VN"),
+        items:{}
+    };
+
+    items.forEach((i,idx)=>{
+        data.items[i[0]]={
+            value:document.getElementById("total"+idx).value||0,
+            unit:i[1]
+        };
+    });
+
+    // ❗ GHI ĐÈ – chỉ lưu lần chốt gần nhất
+    localStorage.setItem("TON_KHO_CHOT",JSON.stringify(data));
+    toast("✅ Đã chốt tồn kho ngày " + data.date);
+}
+
+function showPrev(){
+    const data=JSON.parse(localStorage.getItem("TON_KHO_CHOT"));
+    const list=document.getElementById("prevList");
+    list.innerHTML="";
+    if(!data){
+        list.innerHTML="<i>Chưa có dữ liệu chốt</i>";
+    }else{
+        Object.keys(data.items).forEach(k=>{
+            const v=data.items[k];
+            list.innerHTML+=`<div><span>${k}</span><b>${v.value} ${v.unit}</b></div>`;
+        });
+    }
+    document.getElementById("modal").style.display="flex";
+}
+
+function closeModal(){
+    document.getElementById("modal").style.display="none";
+}
+
+function toast(msg){
+    const t=document.getElementById("toast");
+    t.innerText=msg;
+    t.style.display="block";
+    setTimeout(()=>t.style.display="none",2500);
+}
+</script>
+</body>
+</html>
